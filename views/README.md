@@ -36,6 +36,7 @@ interpolated from the shell. No hand-placed pixels.
 | `Meter(value: n, .color)` | a 0–100 level bar |
 | `Graph("v1 v2 …", .color)` | an auto-scaled bar graph |
 | `Bar(.color)` | a filled block |
+| `Image("file.pgi")` | blit an image (make one with `tools/mkimg.sh`) |
 | `Spacer()` | a flexible gap that pushes things apart |
 
 **Modifiers:** `.h(n)` / `.w(n)` pin a size, `.pad(n)` sets padding, `.color`
@@ -77,9 +78,24 @@ simple canvas. `pgview.c` here is the same engine as a host tool for PNG preview
 The command-based API (`UI_CARD`, `UI_TEXT`, …) in `ui.sh` still works — view
 files are the higher-level, no-coordinates option on top of it.
 
+## Images
+
+`Image("logo.pgi")` blits a picture. Give it a size with `.w`/`.h` (inside a
+stack it otherwise fills its share). The file is a **`.pgi`** — the Pager's own
+pixel format with a tiny size header, so the renderer just reads and blits it,
+no decoding. Make one from any image:
+
+```sh
+tools/mkimg.sh logo.png logo.pgi 96 96    # resize to 96x96
+tools/mkimg.sh icon.png icon.pgi 48       # 48 wide, height keeps the aspect
+```
+
+Keep them small — a `.pgi` is uncompressed (96×96 ≈ 18 KB, full-screen ≈ 208 KB).
+Ship the `.pgi` next to your `payload.sh`; paths in a view are relative to it.
+
 ## Notes
 
 - One UI command / component per line still applies to the command API; view
   files use normal nesting.
-- `Image("file")` is reserved — it reserves a box in the layout; on-device image
-  blitting is not wired up yet.
+- Image paths are resolved relative to the payload directory (where `ui.sh`
+  lives), so `Image("logo.pgi")` just works when the `.pgi` ships alongside.

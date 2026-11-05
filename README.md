@@ -63,6 +63,7 @@ UI_END
 | `UI_BAR x y w h [color]` | filled bar |
 | `UI_METER x y w h percent [color]` | a 0–100 level/progress bar |
 | `UI_GRAPH x y w h "v1 v2 v3 ..." [color]` | auto-scaled bar graph of a series |
+| `UI_IMAGE x y path` | blit a `.pgi` image (make one with `tools/mkimg.sh`) |
 | `UI_SHOW` | render everything you've drawn |
 | `UI_KEY [timeout]` | wait for a button → `UP DOWN LEFT RIGHT A B POWER` (A = Green, B = Red) |
 
@@ -191,6 +192,7 @@ bash build.sh
 | `font5x7.h` | the bitmap font |
 | `build.sh` | reproducible build of both binaries |
 | `builder.html` | the visual **view-file** builder |
+| `tools/mkimg.sh` | turn a PNG/JPG into a `.pgi` image for `Image`/`UI_IMAGE` |
 | `views/` | the view-file syntax, engine source, and samples |
 | `demo/` | example payloads (`payload.sh`, `recon_monitor.sh`, `wifi_foxhunt.sh`, `View_Demo/`) |
 | `docs/` | the WiFi Foxhunt code walkthrough |

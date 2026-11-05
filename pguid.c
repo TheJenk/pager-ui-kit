@@ -1,11 +1,11 @@
 /*
  * pguid - a tiny on-screen renderer for the WiFi Pineapple Pager.
  *
- * This is a PROTOTYPE of a firmware feature: let a payload draw custom screens
- * and menus WITHOUT bringing its own framebuffer renderer. pguid owns the
- * framebuffer, the font, the rotation and the buttons. A payload (in ANY
- * language - bash, python, ...) just sends it simple text commands and reads
- * back button presses. See pgui.sh for the friendly bash wrapper.
+ * Lets a payload draw custom screens and menus WITHOUT bringing its own
+ * framebuffer renderer. pguid owns the framebuffer, the font, the rotation and
+ * the buttons. A payload (in ANY language - bash, python, ...) just sends it
+ * simple text commands and reads back button presses. See ui.sh for the
+ * friendly bash wrapper.
  *
  * Usage:  pguid <command-fifo> <event-fifo>
  *   reads newline-terminated commands from <command-fifo>:
@@ -14,6 +14,7 @@
  *     frame  x y w h RRGGBB          (1px outline)
  *     line   x y w h RRGGBB          (filled bar; w or h = thickness)
  *     text   x y size RRGGBB  the rest of the line is the string
+ *     image  x y path                (blit a .pgi image, top-left at x,y)
  *     present                        (show what's been drawn)
  *     quit
  *   writes one line per event to <event-fifo>:
@@ -107,6 +108,27 @@ static void emit(const char *s) { sys3(SYS_write, outfd, (long)s, slen(s)); }
 
 static void present(void) { sys3(SYS_lseek, fbfd, 0, 0); sys3(SYS_write, fbfd, (long)fb, FRAME_BYTES); }
 
+/* Blit a .pgi image (4-byte header: u16 width, u16 height, little-endian,
+ * then width*height RGB565LE pixels) with its top-left corner at (x,y).
+ * Streamed a row at a time so any size works with a small buffer. */
+static void blit_image(int x, int y, const char *path) {
+    int fd = (int)sys3(SYS_open, (long)path, O_RDONLY, 0);
+    if (fd < 0) return;
+    unsigned char hdr[4];
+    if (sys3(SYS_read, fd, (long)hdr, 4) == 4) {
+        int iw = hdr[0] | (hdr[1] << 8), ih = hdr[2] | (hdr[3] << 8);
+        static unsigned char row[W * 2];
+        for (int j = 0; j < ih; j++) {
+            int need = iw * 2; if (need > (int)sizeof(row)) need = sizeof(row);
+            int got = 0;
+            while (got < need) { long r = sys3(SYS_read, fd, (long)(row + got), need - got); if (r <= 0) break; got += r; }
+            for (int i = 0; i * 2 + 1 < got; i++) px(x + i, y + j, (uint16_t)(row[i * 2] | (row[i * 2 + 1] << 8)));
+            if (got < need) break;
+        }
+    }
+    sys3(SYS_close, fd, 0, 0);
+}
+
 static void run_cmd(char *line) {
     char *p = line;
     while (*p == ' ') p++;
@@ -126,6 +148,10 @@ static void run_cmd(char *line) {
         p += 4; int x = next_int(&p), y = next_int(&p), sc = next_int(&p); uint16_t c = next_color(&p);
         if (*p == ' ') p++;
         draw_text(x, y, p, 10000, c, sc < 1 ? 1 : sc);
+    } else if (p[0] == 'i' && p[1] == 'm') {     /* image x y path  (.pgi) */
+        p += 5; int x = next_int(&p), y = next_int(&p);
+        while (*p == ' ') p++;                    /* rest of line = file path */
+        blit_image(x, y, p);
     } else if (p[0] == 'p' && p[1] == 'r') {     /* present */
         present();
     } else if (p[0] == 'q' && p[1] == 'u') {     /* quit */

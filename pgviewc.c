@@ -31,6 +31,7 @@ static void CLEAR(const char*c){ es("clear ");es(c);es("\n"); }
 static void RECT(int x,int y,int w,int h,const char*c){ es("rect ");ei(x);es(" ");ei(y);es(" ");ei(w);es(" ");ei(h);es(" ");es(c);es("\n"); }
 static void FRAME(int x,int y,int w,int h,const char*c){ es("frame ");ei(x);es(" ");ei(y);es(" ");ei(w);es(" ");ei(h);es(" ");es(c);es("\n"); }
 static void TEXT(int x,int y,int s,const char*c,const char*t){ es("text ");ei(x);es(" ");ei(y);es(" ");ei(s);es(" ");es(c);es(" ");es(t);es("\n"); }
+static void IMAGE(int x,int y,const char*path){ es("image ");ei(x);es(" ");ei(y);es(" ");es(path);es("\n"); }
 
 /* ---- palette & named colors (as hex strings) ---- */
 static const char *C_BG="0e1016",*C_BAR="1a2234",*C_LINE="2b3a52",*C_TEXT="e8ecf3",*C_DIM="7f8aa0",*C_ACCENT="5aa0dc";
@@ -99,7 +100,7 @@ static void draw(Node*n){ switch(n->type){
   case N_TEXT: TEXT(n->x,n->y,n->size,n->col,n->text); break;
   case N_BAR: RECT(n->x,n->y,n->w,n->h,n->col); break;
   case N_METER:{ FRAME(n->x,n->y,n->w,n->h,C_LINE); int p=n->pct; if(p<0)p=0;if(p>100)p=100; int fw=(n->w-2)*p/100; if(fw>0)RECT(n->x+1,n->y+1,fw,n->h-2,n->col); break; }
-  case N_IMG: RECT(n->x,n->y,n->w,n->h,"1b2432"); FRAME(n->x,n->y,n->w,n->h,C_ACCENT); break;
+  case N_IMG: if(n->text[0])IMAGE(n->x,n->y,n->text); else { RECT(n->x,n->y,n->w,n->h,"1b2432"); FRAME(n->x,n->y,n->w,n->h,C_ACCENT); } break;
   case N_GRAPH:{ /* parse space-separated values */ const char*v=n->vals; int vals[80],nv=0;
     while(*v&&nv<80){ while(*v==' ')v++; if(!*v)break; int neg=0; if(*v=='-'){neg=1;v++;} int x=0,any=0; while(*v>='0'&&*v<='9'){x=x*10+(*v++-'0');any=1;} if(any)vals[nv++]=neg?-x:x; while(*v&&*v!=' ')v++; }
     if(!nv){ FRAME(n->x,n->y,n->w,n->h,C_LINE); break; } int mx=1; for(int i=0;i<nv;i++)if(vals[i]>mx)mx=vals[i];

@@ -44,7 +44,9 @@ _col() {
 UI_BEGIN() {
     rm -f "$_UI_CMD" "$_UI_EVT"; mkfifo "$_UI_CMD" "$_UI_EVT"
     command -v UI_TAKEOVER >/dev/null 2>&1 && UI_TAKEOVER
-    "$UI_BIN" "$_UI_CMD" "$_UI_EVT" & _UI_PID=$!
+    # run the renderer with the UI dir as its cwd so Image/UI_IMAGE paths can be
+    # relative to the payload (your .pgi files live next to ui.sh).
+    ( cd "$UI_DIR" && exec "$UI_BIN" "$_UI_CMD" "$_UI_EVT" ) & _UI_PID=$!
     exec 4>"$_UI_CMD"; exec 3<"$_UI_EVT"
     local r; read -r r <&3                 # wait for READY
     trap UI_END EXIT INT TERM
@@ -66,6 +68,10 @@ UI_BAR()   { echo "rect $1 $2 $3 $4 $(_col "${5:-}" "$UI_ACCENT")" >&4; }    # f
 # UI_TEXT x y "text" [color] [size 1-4]
 UI_TEXT()  { echo "text $1 $2 ${5:-2} $(_col "${4:-}") $3" >&4; }
 UI_SHOW()  { echo "present" >&4; }
+# UI_IMAGE x y path   - blit a .pgi image with its top-left at x,y. Path is
+# relative to the payload dir (where ui.sh lives) unless absolute. Make a .pgi
+# from a PNG with tools/mkimg.sh.
+UI_IMAGE() { echo "image $1 $2 $3" >&4; }
 
 _tw() { echo $(( ${#1} * 6 * ${2:-2} - ${2:-2} )); }   # text width in px
 # UI_TEXT_CENTER cx y "text" [color] [size]
