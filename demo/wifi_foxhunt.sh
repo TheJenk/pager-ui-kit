@@ -50,40 +50,45 @@ barw() { local p; p=$(prox "$1"); echo $(( p * 150 / 100 )); }
 UI_BEGIN
 
 # ============================ screen 1: the AP list ============================
+# The scan (a curl to recon) is kept OUT of the keypress path: pressing Up/Down
+# just moves the cursor and redraws from the cached list, so navigation is
+# instant. The list only re-scans on the 2-second idle timeout (or after a hunt).
 pick_ap() {
-    local sel=0 lines=() n i y p name sig mac ch ss tc bc l
-    while true; do
-        lines=(); while IFS= read -r l; do lines+=("$l"); done < <(scan_aps)
-        n=${#lines[@]}
-        [ "$sel" -ge "$n" ] && sel=$(( n>0 ? n-1 : 0 ))
+    local sel=0 n i y p name sig mac ch ss tc bc l
+    local -a LINES=()
 
+    _scan() { LINES=(); while IFS= read -r l; do LINES+=("$l"); done < <(scan_aps); n=${#LINES[@]}; }
+    _draw() {
+        [ "$sel" -ge "$n" ] && sel=$(( n>0 ? n-1 : 0 ))
         UI_CLEAR
         UI_HEADER "WIFI FOXHUNT"
         UI_TEXT $((480-96)) 8 "$n NEARBY" DIM 1
-        if [ "$n" -eq 0 ]; then
-            UI_TEXT_CENTER 240 110 "SCANNING FOR APS..." DIM 2
-        fi
+        [ "$n" -eq 0 ] && UI_TEXT_CENTER 240 110 "SCANNING FOR APS..." DIM 2
         for ((i=0; i<n; i++)); do
             y=$(( 34 + i*23 ))
-            IFS='|' read -r sig mac ch ss <<< "${lines[$i]}"
+            IFS='|' read -r sig mac ch ss <<< "${LINES[$i]}"
             name="${ss:-${mac: -8}}"
             [ "$i" -eq "$sel" ] && UI_RECT 6 $((y-2)) 468 22 "$UI_SELECT"
-            local tc=TEXT; [ "$i" -eq "$sel" ] && tc=WHITE
+            tc=TEXT; [ "$i" -eq "$sel" ] && tc=WHITE
             UI_TEXT 14 $((y+3)) "$name" "$tc" 2
-            # signal bar + dBm on the right
-            p=$(prox "$sig")
-            local bc=RED; [ "$p" -gt 33 ] && bc=AMBER; [ "$p" -gt 66 ] && bc=GREEN
+            # signal bar + dBm (prox inlined - no fork per row)
+            p=$(( (sig+90)*100/50 )); [ "$p" -lt 0 ] && p=0; [ "$p" -gt 100 ] && p=100
+            bc=RED; [ "$p" -gt 33 ] && bc=AMBER; [ "$p" -gt 66 ] && bc=GREEN
             UI_RECT 300 $((y+2)) $(( p*120/100 )) 12 "$bc"
             UI_TEXT 430 $((y+3)) "$sig" "$tc" 1
         done
         UI_FOOTER "UP/DN  GREEN HUNT" "RED EXIT"
         UI_SHOW
+    }
 
-        case "$(UI_KEY 2)" in           # auto-rescan every 2s, or react to a key
-            UP)    [ "$n" -gt 0 ] && sel=$(( sel>0 ? sel-1 : n-1 )) ;;
-            DOWN)  [ "$n" -gt 0 ] && sel=$(( sel<n-1 ? sel+1 : 0 )) ;;
-            A)     [ "$n" -gt 0 ] && { IFS='|' read -r sig mac ch ss <<< "${lines[$sel]}"; hunt "$mac" "${ss:-${mac: -8}}" "$ch"; } ;;
+    _scan; _draw
+    while true; do
+        case "$(UI_KEY 2)" in
+            UP)    [ "$n" -gt 0 ] && { sel=$(( sel>0 ? sel-1 : n-1 )); _draw; } ;;
+            DOWN)  [ "$n" -gt 0 ] && { sel=$(( sel<n-1 ? sel+1 : 0 )); _draw; } ;;
+            A)     [ "$n" -gt 0 ] && { IFS='|' read -r sig mac ch ss <<< "${LINES[$sel]}"; hunt "$mac" "${ss:-${mac: -8}}" "$ch"; _scan; _draw; } ;;
             B)     return ;;
+            "")    _scan; _draw ;;    # idle timeout: refresh the AP list
         esac
     done
 }

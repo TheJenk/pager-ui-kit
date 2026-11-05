@@ -65,10 +65,11 @@ static int rstr(char*b,int m){ sws(); if(*P!='"')return 0; P++; int i=0; while(*
 static void applyDot(Node*n,const char*m){ if(seq(m,"big"))n->size=3; else if(seq(m,"med"))n->size=2; else if(seq(m,"small"))n->size=1;
   else scpy(n->col,namedhex(m),16); }
 static void pArgs(Node*n){ int first=1; for(;;){ sws(); if(*P==')'||!*P)break;
+  const char*at=P;   /* so a char nothing consumes can't spin us forever */
   if(*P=='"'){ char s[160]; rstr(s,160); if(n->type==N_FOOT){ if(first)scpy(n->text,s,160); else scpy(n->text2,s,64);} else if(n->type==N_GRAPH)scpy(n->vals,s,160); else scpy(n->text,s,160); }
   else if(*P=='.'){ P++; char m[24]; rid(m,24); applyDot(n,m); }
   else { char id[40]; rid(id,40); sws(); if(*P==':'){ P++; sws(); if(*P=='"'){ char v[160]; rstr(v,160); scpy(n->text,v,160);} else if(*P=='.'){P++;char m[24];rid(m,24);applyDot(n,m);} else { char v[32]; rid(v,32); if(seq(id,"value"))n->pct=atoi_(v); else if(seq(id,"spacing"))n->spacing=atoi_(v); } } else { if(!n->text[0])scpy(n->text,id,160); } }
-  first=0; sws(); if(*P==',')P++; } }
+  first=0; sws(); if(*P==',')P++; if(P==at)P++;   /* always make progress */ } }
 static void pMods(Node*n){ for(;;){ sws(); if(*P!='.')break; P++; char m[24]; rid(m,24); sws(); int a=0; if(*P=='('){ P++; char v[24]; rid(v,24); a=atoi_(v); sws(); if(*P==')')P++; }
   if(seq(m,"h"))n->fixH=a; else if(seq(m,"w"))n->fixW=a; else if(seq(m,"pad"))n->pad=a; else if(seq(m,"size"))n->size=a; else applyDot(n,m); } }
 static Node* pNode(){ sws(); char name[32]; if(!rid(name,32))return 0; int t=typeFor(name); if(t<0)return 0; Node*n=nnew(t);

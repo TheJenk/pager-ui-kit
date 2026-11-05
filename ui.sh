@@ -22,21 +22,21 @@ UI_BG=0e1016; UI_BAR=1a2234; UI_LINE=2b3a52
 UI_TEXT=e8ecf3; UI_DIM=7f8aa0; UI_ACCENT=5aa0dc
 UI_SELECT=2f7d57; UI_SELECT_TEXT=ffffff
 
-# resolve a color name or RRGGBB hex -> hex (default = body text color).
-# Portable: no bash-4 case-conversion, works under any /bin/bash or busybox.
+# resolve a color name or RRGGBB hex -> hex, into $REPLY (NO subshell, NO pipe).
+# Every drawing primitive calls this once per command; doing it fork-free is what
+# keeps redraws fast on the device - a command substitution or a `tr` pipe here
+# would fork tens of processes per frame. Needs bash (uses ${x^^}).
 _col() {
-    local c u
-    c="${1:-}"
-    u="$(printf '%s' "$c" | tr '[:lower:]' '[:upper:]')"
-    case "$u" in
-        WHITE) echo ffffff;; BLACK) echo 000000;;
-        GREY|GRAY|DIM) echo "$UI_DIM";; TEXT) echo "$UI_TEXT";; ACCENT) echo "$UI_ACCENT";;
-        RED) echo e0483f;; GREEN) echo 2fae6a;; BLUE) echo 3a86c8;; CYAN) echo 3ac8c8;;
-        YELLOW) echo e0c23f;; AMBER) echo e0a53f;; ORANGE) echo e07b3f;;
-        PURPLE) echo 9b7ede;; PINK) echo e06ba0;;
-        "") echo "${2:-$UI_TEXT}";;
-        [0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]) echo "$c";;   # RRGGBB (either case)
-        *) echo "${2:-$UI_TEXT}";;
+    local c="${1:-}"
+    case "${c^^}" in
+        WHITE) REPLY=ffffff;; BLACK) REPLY=000000;;
+        GREY|GRAY|DIM) REPLY="$UI_DIM";; TEXT) REPLY="$UI_TEXT";; ACCENT) REPLY="$UI_ACCENT";;
+        RED) REPLY=e0483f;; GREEN) REPLY=2fae6a;; BLUE) REPLY=3a86c8;; CYAN) REPLY=3ac8c8;;
+        YELLOW) REPLY=e0c23f;; AMBER) REPLY=e0a53f;; ORANGE) REPLY=e07b3f;;
+        PURPLE) REPLY=9b7ede;; PINK) REPLY=e06ba0;;
+        "") REPLY="${2:-$UI_TEXT}";;
+        [0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F][0-9A-F]) REPLY="$c";;   # RRGGBB (either case)
+        *) REPLY="${2:-$UI_TEXT}";;
     esac
 }
 
@@ -61,21 +61,22 @@ UI_END() {
 }
 
 # ---- drawing primitives ----
-UI_CLEAR() { echo "clear $(_col "${1:-}" "$UI_BG")" >&4; }
-UI_RECT()  { echo "rect $1 $2 $3 $4 $(_col "${5:-}")" >&4; }                 # filled
-UI_BOX()   { echo "frame $1 $2 $3 $4 $(_col "${5:-}" "$UI_LINE")" >&4; }     # outline
-UI_BAR()   { echo "rect $1 $2 $3 $4 $(_col "${5:-}" "$UI_ACCENT")" >&4; }    # filled bar
+UI_CLEAR() { _col "${1:-}" "$UI_BG";   echo "clear $REPLY" >&4; }
+UI_RECT()  { _col "${5:-}";             echo "rect $1 $2 $3 $4 $REPLY" >&4; }   # filled
+UI_BOX()   { _col "${5:-}" "$UI_LINE";  echo "frame $1 $2 $3 $4 $REPLY" >&4; }  # outline
+UI_BAR()   { _col "${5:-}" "$UI_ACCENT"; echo "rect $1 $2 $3 $4 $REPLY" >&4; }  # filled bar
 # UI_TEXT x y "text" [color] [size 1-4]
-UI_TEXT()  { echo "text $1 $2 ${5:-2} $(_col "${4:-}") $3" >&4; }
+UI_TEXT()  { _col "${4:-}";             echo "text $1 $2 ${5:-2} $REPLY $3" >&4; }
 UI_SHOW()  { echo "present" >&4; }
 # UI_IMAGE x y path   - blit a .pgi image with its top-left at x,y. Path is
 # relative to the payload dir (where ui.sh lives) unless absolute. Make a .pgi
 # from a PNG with tools/mkimg.sh.
 UI_IMAGE() { echo "image $1 $2 $3" >&4; }
 
-_tw() { echo $(( ${#1} * 6 * ${2:-2} - ${2:-2} )); }   # text width in px
+# text width in px -> $REPLY (fork-free; used in arithmetic by the callers)
+_tw() { local s=${2:-2}; REPLY=$(( ${#1} * 6 * s - s )); }
 # UI_TEXT_CENTER cx y "text" [color] [size]
-UI_TEXT_CENTER() { UI_TEXT $(( $1 - $(_tw "$3" "${5:-2}")/2 )) "$2" "$3" "${4:-}" "${5:-2}"; }
+UI_TEXT_CENTER() { _tw "$3" "${5:-2}"; UI_TEXT $(( $1 - REPLY/2 )) "$2" "$3" "${4:-}" "${5:-2}"; }
 
 # ---- layout widgets ----
 UI_HEADER() {                                   # title bar across the top
@@ -85,7 +86,7 @@ UI_HEADER() {                                   # title bar across the top
 UI_FOOTER() {                                   # bottom hints: left, right
     UI_RECT 0 $((_UI_H-16)) $_UI_W 1 "$UI_LINE"
     [ -n "$1" ] && UI_TEXT 8 $((_UI_H-12)) "$1" DIM 1
-    [ -n "$2" ] && UI_TEXT $(( _UI_W-8-$(_tw "$2" 1) )) $((_UI_H-12)) "$2" DIM 1
+    [ -n "$2" ] && { _tw "$2" 1; UI_TEXT $(( _UI_W-8-REPLY )) $((_UI_H-12)) "$2" DIM 1; }
 }
 UI_CARD() {                                     # panel x y w h [Title]
     UI_RECT "$1" "$2" "$3" "$4" "$UI_BAR"; UI_BOX "$1" "$2" "$3" "$4" "$UI_LINE"
@@ -118,17 +119,22 @@ UI_GRAPH() {
 # UI_RENDER file.view   - lay out and draw a .view file. \(var) placeholders in
 # the view are filled in from the current shell variables. Followed by UI_SHOW
 # implicitly (the view includes its own present).
+_UI_VF=""; _UI_VTPL=""
 UI_RENDER() {
     local vf="$1" content v
     [ -f "$vf" ] || vf="$UI_DIR/$1"
     [ -f "$vf" ] || { echo "[UI_RENDER] no such view: $1" >&2; return 1; }
-    content="$(cat "$vf")"
-    # fill \(name) -> $name
+    # cache the view text so a loop that re-renders the same view every frame
+    # reads and forks as little as possible (the layout is recomputed, but the
+    # file isn't re-read). $(<file) avoids a `cat` fork on the first read.
+    [ "$vf" = "$_UI_VF" ] || { _UI_VTPL="$(<"$vf")"; _UI_VF="$vf"; }
+    content="$_UI_VTPL"
+    # fill \(name) -> $name  (pure bash, no forks)
     while [[ "$content" =~ \\\(([a-zA-Z_][a-zA-Z0-9_]*)\) ]]; do
         v="${BASH_REMATCH[1]}"; content="${content//\\($v)/${!v}}"
     done
-    # compile to draw commands and feed the renderer
-    printf '%s' "$content" | "$UI_VIEWC" | while IFS= read -r l; do printf '%s\n' "$l" >&4; done
+    # compile to draw commands straight into the renderer - one fork per frame
+    printf '%s' "$content" | "$UI_VIEWC" >&4
 }
 
 # ---- input ----
