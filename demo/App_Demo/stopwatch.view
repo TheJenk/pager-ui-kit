@@ -1,0 +1,12 @@
+VStack(spacing: 4) {
+  Header("STOPWATCH")
+  HStack {
+    Text("KEEPS RUNNING ACROSS SCREENS", .dim, .small)
+    Spacer()
+    Text("BATT \(batt)%", .\(bcol), .small)
+  }.h(14)
+  Spacer()
+  HStack { Spacer() Text("\(sw)", .green).size(6) Spacer() }
+  Spacer()
+  Footer("GREEN  RESET", "RED  BACK")
+}

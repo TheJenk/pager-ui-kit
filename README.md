@@ -131,8 +131,14 @@ No install, no server — it's a single self-contained file.
 
 ## Examples
 
-Three full payloads in `demo/`, all pure bash:
+Full payloads in `demo/`, all pure bash:
 
+- **`App_Demo/`** — **how to structure a real app**: one main loop that's a state
+  machine over screens (a menu plus Stopwatch / System / About sub-screens). A
+  stopwatch **keeps running as you move between screens** — it's derived from a
+  start timestamp, so it never pauses or resets — and the battery shows on every
+  screen. The menu uses the command API (dynamic, selectable); the sub-screens
+  are view files. Start here if you want to know how to do more than one screen.
 - **`payload.sh`** — a dashboard with cards and a bar-graph, a menu, a confirm,
   and message screens.
 - **`recon_monitor.sh`** — a **live** Wi-Fi dashboard: access-point and client

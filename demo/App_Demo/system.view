@@ -1,0 +1,16 @@
+VStack(spacing: 6) {
+  Header("SYSTEM")
+  HStack {
+    Text("STOPWATCH \(sw)", .amber, .small)
+    Spacer()
+    Text("BATT \(batt)%", .\(bcol), .small)
+  }.h(14)
+  HStack(spacing: 8) {
+    Card("BATTERY")  { Text("\(batt)%", .\(bcol), .big) }
+    Card("APS SEEN") { Text("\(aps)",   .accent, .big) }
+  }.h(60)
+  Meter(value: \(batt), .\(bcol)).h(18)
+  Text("UPTIME \(up)", .dim, .small)
+  Spacer()
+  Footer("", "RED  BACK")
+}

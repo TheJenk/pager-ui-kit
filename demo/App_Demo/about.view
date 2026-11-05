@@ -1,0 +1,16 @@
+VStack(spacing: 6) {
+  Header("ABOUT")
+  HStack {
+    Text("STOPWATCH \(sw)", .amber, .small)
+    Spacer()
+    Text("BATT \(batt)%", .\(bcol), .small)
+  }.h(14)
+  Spacer()
+  Text("One main loop = a state machine.", .text, .small)
+  Text("Each tick recomputes live values", .dim, .small)
+  Text("and re-renders the current screen.", .dim, .small)
+  Text("The timer is now - start, so it", .dim, .small)
+  Text("never pauses when you switch views.", .dim, .small)
+  Spacer()
+  Footer("", "RED  BACK")
+}
