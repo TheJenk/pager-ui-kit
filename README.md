@@ -127,6 +127,10 @@ files with a live, pixel-perfect preview:
 - **Drag rows in the outline to reorganize** — drop onto a stack to move an
   element inside it, or onto an element to drop it right after. Move things
   between stacks freely.
+- **Drag a PNG/JPG onto the builder** (or the **＋ Image file → .pgi** button) and
+  it converts the image to a `.pgi` right there, hands you the file to drop next
+  to your payload, and adds the `Image(...)` for you — no `mkimg.sh`, and the
+  canvas shows the real image.
 - The **`.view` code** sits in a plain editor at the bottom — edit it directly and
   the canvas follows, so you can paste one in or copy it out. Both stay in sync.
 - **Copy .view** to drop it next to your payload.

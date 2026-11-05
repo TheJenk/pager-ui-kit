@@ -67,6 +67,7 @@
   <aside class="nav">
     <h3>Add into selection</h3>
     <div class="palette" id="palette"></div>
+    <button class="sm" id="imgBtn" style="margin-top:6px;width:100%">＋ Image file → .pgi</button>
     <h3>Outline <span style="font-weight:400;color:var(--dim);font-size:11px">— drag to move</span></h3>
     <div class="tree" id="tree"></div>
   </aside>
@@ -191,8 +192,10 @@ function drawNode(n){ switch(n.type){
   case 'Graph':{ const vs=(''+n.values).trim().split(/\s+/).map(Number).filter(v=>!isNaN(v)); if(!vs.length){ box(n.x,n.y,n.w,n.h,'LINE'); break; }
     const mx=Math.max(1,...vs); let bw=Math.floor(n.w/vs.length); if(bw<1)bw=1; const gap=1; if(bw>2)bw-=gap;
     vs.forEach((v,i)=>{ let bh=Math.floor(v*(n.h-1)/mx); if(bh<1)bh=1; fill(n.x+i*(bw+gap),n.y+n.h-bh,bw,bh,n.color); }); break; }
-  case 'Image': fill(n.x,n.y,n.w,n.h,'1b2432'); box(n.x,n.y,n.w,n.h,'ACCENT');
-    text(n.x+6,n.y+Math.max(4,(n.h-7)/2),'IMG '+n.src,'DIM',1); break;
+  case 'Image':
+    if(imgCache[n.src]){ try{ ctx.imageSmoothingEnabled=false; ctx.drawImage(imgCache[n.src],n.x,n.y,n.w,n.h); }catch(e){} }
+    else { fill(n.x,n.y,n.w,n.h,'1b2432'); box(n.x,n.y,n.w,n.h,'ACCENT'); text(n.x+6,n.y+Math.max(4,(n.h-7)/2),'IMG '+n.src,'DIM',1); }
+    break;
   case 'Spacer': break; } }
 
 // redraw everything EXCEPT the inspector inputs - used while typing in the
@@ -212,11 +215,45 @@ function parentOf(n,t,p){ p=p||null; if(n===t)return p; for(const k of (n.kids||
 // ---- palette (add) ----
 function renderPalette(){ const el=document.getElementById('palette'); el.innerHTML='';
   TYPES.forEach(t=>{ const b=document.createElement('button'); b.className='sm'; b.textContent=t; b.onclick=()=>add(t); el.appendChild(b); }); }
-function add(t){ const n=mk(t); let target = sel && CONTAINER(sel.type) ? sel : (sel ? parentOf(root,sel) : root);
+function addNode(n){ let target = sel && CONTAINER(sel.type) ? sel : (sel ? parentOf(root,sel) : root);
   if(!target) target=root;
   if(sel && target!==sel){ const idx=target.kids.indexOf(sel); target.kids.splice(idx+1,0,n); }
   else target.kids.push(n);
   sel=n; pushCode(); render(); }
+function add(t){ addNode(mk(t)); }
+
+// ---- drop a PNG/JPG -> convert to a .pgi (the device's raw RGB565 format) ----
+// The Pager renderer can't decode PNG/JPEG, so we do it here in the browser:
+// decode, scale to fit the screen, write a 4-byte header (u16 w, u16 h, LE) +
+// RGB565LE pixels, hand you the .pgi to drop next to your payload, and insert an
+// Image() that references it. A live preview is cached so the canvas shows it.
+const imgCache={};
+function toPgi(id){ const {data,width,height}=id, out=new Uint8Array(4+width*height*2);
+  out[0]=width&255; out[1]=width>>8&255; out[2]=height&255; out[3]=height>>8&255; let o=4;
+  for(let i=0;i<width*height;i++){ const r=data[i*4],g=data[i*4+1],b=data[i*4+2],v=(r&0xf8)<<8|(g&0xfc)<<3|b>>3; out[o++]=v&255; out[o++]=v>>8&255; }
+  return out; }
+function importImage(file){
+  if(!file || !/^image\//.test(file.type)){ return; }
+  const img=new Image();
+  img.onload=()=>{
+    let w=img.naturalWidth, h=img.naturalHeight;
+    const s=Math.min(1, 480/w, 222/h);                 // never bigger than the screen
+    w=Math.max(1,Math.round(w*s)); h=Math.max(1,Math.round(h*s));
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    const cx=c.getContext('2d'); cx.drawImage(img,0,0,w,h);
+    const bytes=toPgi(cx.getImageData(0,0,w,h));
+    const base=((file.name||'image').replace(/\.[^.]+$/,'')||'image')+'.pgi';
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));
+    a.download=base; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+    imgCache[base]=c;
+    const n=mk('Image'); n.src=base; n.fixW=w; n.fixH=h; addNode(n);
+    URL.revokeObjectURL(img.src);
+    flash(`Saved ${base} — ${w}×${h}, ${bytes.length.toLocaleString()} bytes. Drop it next to your payload.`);
+  };
+  img.onerror=()=>flash('Could not read that image.');
+  img.src=URL.createObjectURL(file);
+}
+function flash(msg){ const h=document.querySelector('.hint'); if(!h)return; const old=h.textContent; h.textContent=msg; h.style.color='#2fe08a'; clearTimeout(flash._t); flash._t=setTimeout(()=>{ h.textContent=old; h.style.color=''; },6000); }
 function del(n){ const p=parentOf(root,n); if(!p){ return; } p.kids.splice(p.kids.indexOf(n),1); sel=null; pushCode(); render(); }
 function move(n,d){ const p=parentOf(root,n); if(!p)return; const i=p.kids.indexOf(n); const j=i+d; if(j<0||j>=p.kids.length)return;
   p.kids.splice(i,1); p.kids.splice(j,0,n); pushCode(); render(); }
@@ -296,6 +333,12 @@ let typing; codeEl.addEventListener('input',()=>{ clearTimeout(typing); typing=s
 // ---- top buttons ----
 document.getElementById('newBtn').onclick=()=>{ if(confirm('Start a new, empty view?')){ root=mk('VStack'); sel=root; pushCode(); render(); } };
 document.getElementById('sampleBtn').onclick=()=>loadSample();
+document.getElementById('imgBtn').onclick=()=>{ const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=()=>{ if(inp.files[0]) importImage(inp.files[0]); }; inp.click(); };
+// drag any image file anywhere onto the builder to convert + add it
+window.addEventListener('dragover',e=>{ if(e.dataTransfer && Array.from(e.dataTransfer.types||[]).includes('Files')) e.preventDefault(); });
+window.addEventListener('drop',e=>{ const f=e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(f && /^image\//.test(f.type)){ e.preventDefault(); importImage(f); } });
 document.getElementById('copyBtn').onclick=()=>{ navigator.clipboard.writeText(codeEl.value).then(()=>{ const b=document.getElementById('copyBtn'); b.textContent='Copied!'; setTimeout(()=>b.textContent='Copy .view',1200); }); };
 document.getElementById('howBtn').onclick=()=>alert(
 "Save what's in the box as e.g. hunt.view next to your payload, then:\n\n"+

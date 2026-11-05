@@ -93,6 +93,10 @@ tools/mkimg.sh icon.png icon.pgi 48       # 48 wide, height keeps the aspect
 Keep them small — a `.pgi` is uncompressed (96×96 ≈ 18 KB, full-screen ≈ 208 KB).
 Ship the `.pgi` next to your `payload.sh`; paths in a view are relative to it.
 
+Or skip the command line entirely: **drag a PNG/JPG onto `builder.html`** and it
+converts to a `.pgi` in the browser, downloads it, and adds the `Image(...)` for
+you.
+
 ## Notes
 
 - One UI command / component per line still applies to the command API; view
