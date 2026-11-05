@@ -1,0 +1,12 @@
+VStack(spacing: 6) {
+  Header("HUNTING BEAST MODE")
+  HStack(spacing: 8) {
+    Card("SIGNAL")    { Text("-50", .green, .big) }
+    Card("CLOSENESS") { Text("100%", .green, .big) }
+    Card("TREND")     { Text("WARMER", .amber) }
+  }.h(62)
+  Meter(value: 100, .green).h(20)
+  Graph("4 7 5 9 6 8 10 6 9 7 5 8 6 9 7 10", .green).h(50)
+  Spacer()
+  Footer("CLOSER = FULLER + GREENER", "RED BACK")
+}

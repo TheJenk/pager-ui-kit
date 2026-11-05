@@ -1,0 +1,11 @@
+VStack(spacing: 6) {
+  Header("FIELD TOOLKIT")
+  HStack(spacing: 8) {
+    Card("UPLINK")  { Text("ONLINE", .blue, .big) }
+    Card("TARGETS") { Text("42", .green, .big) }
+  }.h(64)
+  Card("SIGNAL") {
+    Graph("4 8 5 9 6 7 10 5 8 6 9 7 5 8", .accent)
+  }
+  Footer("GREEN  OPEN", "RED  EXIT")
+}
