@@ -44,7 +44,13 @@
   .layer:hover{background:var(--panel2)} .layer.sel{background:#1b3a2c;outline:1px solid #2f7d57}
   .layer .sw{width:12px;height:12px;border-radius:3px;flex:none}
   .layer .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .layer .x{color:var(--dim);font-size:16px}
-  footer{border-top:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;height:230px}
+  footer{border-top:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;height:230px;min-height:70px}
+  #codeResize{height:8px;flex:none;cursor:ns-resize;background:var(--line);position:relative}
+  #codeResize::after{content:"";position:absolute;left:50%;top:3px;width:34px;height:2px;margin-left:-17px;background:#3a4660;border-radius:2px}
+  #codeResize:hover{background:#2c3850}
+  #inspResize{width:8px;flex:none;cursor:ew-resize;background:var(--line);position:relative}
+  #inspResize::after{content:"";position:absolute;top:50%;left:3px;height:34px;width:2px;margin-top:-17px;background:#3a4660;border-radius:2px}
+  #inspResize:hover{background:#2c3850}
   .codebar{display:flex;align-items:center;gap:10px;padding:7px 14px;border-bottom:1px solid var(--line)}
   .codebar .ttl{font-size:11px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase}
   .editor{flex:1;position:relative;overflow:hidden}
@@ -72,13 +78,15 @@
     <div class="stage"><canvas id="cv" width="480" height="222"></canvas></div>
     <div class="hint">Click to select &middot; drag to move &middot; drag a corner to resize</div>
   </div>
-  <div class="right">
-    <h3>Properties</h3>
+  <div id="inspResize"></div>
+  <div class="right" id="right">
+    <h3>Inspector</h3>
     <div class="props" id="props"><div class="empty">Select an element, or add one above.</div></div>
     <h3>Elements on this screen</h3>
     <div class="layers" id="layers"></div>
   </div>
 </main>
+<div id="codeResize" title="Drag to resize the code"></div>
 <footer>
   <div class="codebar"><span class="ttl">payload.sh — edit freely; the canvas follows</span>
     <div class="spacer" style="flex:1"></div><button id="copyBtn">Copy code</button></div>
@@ -334,6 +342,19 @@ codeEl.addEventListener('scroll',()=>{ hlEl.scrollTop=codeEl.scrollTop; hlEl.scr
 // ---------- starter content ----------
 const STARTER_EMPTY=`. ui.sh\n\nUI_BEGIN\nUI_CLEAR\nUI_SHOW\nUI_KEY\nUI_END\n`;
 const SAMPLE=`. ui.sh\n\nUI_BEGIN\nUI_CLEAR\nUI_HEADER "FIELD TOOLKIT"\nUI_CARD 10 40 225 70\nUI_TEXT 22 52 "UPLINK" DIM 1\nUI_TEXT 22 68 "ONLINE" BLUE 3\nUI_CARD 245 40 225 70\nUI_TEXT 257 52 "TARGETS" DIM 1\nUI_TEXT 257 68 "42" GREEN 3\nUI_GRAPH 10 120 460 60 "4 8 5 9 6 7 10 5 8 6 9 7" ACCENT\nUI_FOOTER "GREEN  OPEN" "RED  EXIT"\nUI_SHOW\nUI_KEY\nUI_END\n`;
+
+// ---------- resizable panes (Xcode-style) ----------
+function makeResizer(handle, onDrag){ handle.addEventListener('mousedown',e=>{ e.preventDefault();
+  document.body.style.userSelect='none';
+  const mv=ev=>onDrag(ev); const up=()=>{ document.body.style.userSelect=''; document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); };
+  document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up); }); }
+const footerEl=document.querySelector('footer'), rightEl=document.getElementById('right');
+makeResizer(document.getElementById('codeResize'),ev=>{ let h=window.innerHeight-ev.clientY; h=Math.max(70,Math.min(h,window.innerHeight-220));
+  footerEl.style.height=h+'px'; try{localStorage.setItem('pgb.code',h)}catch(e){} hlEl.scrollTop=codeEl.scrollTop; });
+makeResizer(document.getElementById('inspResize'),ev=>{ let w=window.innerWidth-ev.clientX; w=Math.max(220,Math.min(w,560));
+  rightEl.style.width=w+'px'; try{localStorage.setItem('pgb.insp',w)}catch(e){} });
+try{ const ch=localStorage.getItem('pgb.code'); if(ch)footerEl.style.height=ch+'px';
+     const iw=localStorage.getItem('pgb.insp'); if(iw)rightEl.style.width=iw+'px'; }catch(e){}
 
 renderAdd();
 setCode(SAMPLE);
