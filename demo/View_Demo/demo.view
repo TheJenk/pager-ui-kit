@@ -1,0 +1,9 @@
+VStack(spacing: 6) {
+  Header("VIEW DEMO")
+  HStack(spacing: 8) {
+    Card("TICKS")   { Text("\(n)", .blue, .big) }
+    Card("BATTERY") { Text("\(batt)%", .green, .big) }
+  }.h(72)
+  Spacer()
+  Footer("DRAWN FROM A .VIEW FILE", "RED  EXIT")
+}

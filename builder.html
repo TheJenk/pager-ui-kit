@@ -142,6 +142,7 @@ function parseView(src){ let i=0;
   function pNode(){ sws(); const name=rid(); if(!name||!TYPES.includes(name))return null; const n=mk(name); sws();
     if(src[i]==='('){ i++; pArgs(n); sws(); if(src[i]===')')i++; } pMods(n); sws();
     if(src[i]==='{'){ i++; for(;;){ sws(); if(src[i]==='}'||i>=src.length)break; const k=pNode(); if(!k){ i++; continue; } n.kids.push(k); } sws(); if(src[i]==='}')i++; }
+    pMods(n);   // modifiers can come after the { } block (SwiftUI style)
     return n; }
   const r=pNode(); return r||mk('VStack'); }
 

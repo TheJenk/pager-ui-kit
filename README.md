@@ -79,18 +79,52 @@ UI_BG=0b0d12; UI_ACCENT=2fae6a; UI_SELECT=1f6f4a
 UI_BEGIN
 ```
 
+## View files — SwiftUI-style layouts (no coordinates)
+
+For a whole screen, describe the layout in a **`.view`** file and let the engine
+place everything with stacks — no x/y anywhere:
+
+```swift
+VStack(spacing: 6) {
+  Header("HUNTING \(name)")
+  HStack(spacing: 8) {
+    Card("SIGNAL")    { Text("\(sig)", .green, .big) }
+    Card("CLOSENESS") { Text("\(p)%",  .green, .big) }
+  }.h(62)
+  Meter(value: p, .green).h(20)
+  Graph(history, .green).h(50)
+  Spacer()
+  Footer("CLOSER = FULLER", "RED BACK")
+}
+```
+
+The payload becomes almost pure logic — set the variables, render the view:
+
+```sh
+. ui.sh
+UI_BEGIN
+name="Beast Mode"; sig=-50; p=100     # your data
+UI_RENDER hunt.view                   # draws it; \(name), \(sig) are filled in
+UI_KEY
+UI_END
+```
+
+`\(name)`, `\(sig)` are interpolated from the shell. Design views visually in the
+builder below and export the `.view`. Full syntax + the layout engine are in
+[`views/`](views/README.md).
+
 ## Visual builder
 
-Open **`builder.html`** in any browser for a drag-and-drop designer with a live
-preview (pixel-perfect — it uses the same font) and the generated code below:
+Open **`builder.html`** in any browser — a drag-and-drop designer for `.view`
+files with a live, pixel-perfect preview:
 
-- Add elements with buttons, **drag to move, drag a corner to resize**.
-- **Edit the code directly** and the canvas follows — so you can paste a payload
-  in and see it, or copy snippets from anywhere.
-- It reads the `UI_*` commands and **ignores the rest of the payload**.
-- Payloads with **several screens** (more than one `UI_CLEAR…UI_SHOW`) show up as
-  thumbnails along the top; pick one to edit it, and its lines light up in the
-  code so you can see where it lives.
+- A **component palette** (VStack, HStack, Card, Text, Meter, Graph, Image…) and
+  an **outline** of your view's structure.
+- Click an element to select it, edit it in the **inspector** (text, color, size,
+  fixed `.h`/`.w`), reorder or wrap it in a stack.
+- The **`.view` code** sits in a plain editor at the bottom — edit it directly and
+  the canvas follows, so you can paste one in or copy it out. Both stay in sync.
+- **Copy .view** to drop it next to your payload.
 
 No install, no server — it's a single self-contained file.
 
@@ -151,12 +185,14 @@ bash build.sh
 
 | File | |
 |---|---|
-| `ui.sh` | the command library — source this in your payload |
-| `pguid` / `pguid.c` | the renderer (prebuilt binary + source) |
+| `ui.sh` | the command library + `UI_RENDER` — source this in your payload |
+| `pguid` / `pguid.c` | the raw-canvas renderer (prebuilt binary + source) |
+| `pgviewc` / `pgviewc.c` | compiles a `.view` into draw commands (used by `UI_RENDER`) |
 | `font5x7.h` | the bitmap font |
-| `build.sh` | reproducible build of `pguid` |
-| `builder.html` | the visual drag-and-drop UI builder |
-| `demo/` | example payloads (`payload.sh`, `recon_monitor.sh`, `wifi_foxhunt.sh`) |
+| `build.sh` | reproducible build of both binaries |
+| `builder.html` | the visual **view-file** builder |
+| `views/` | the view-file syntax, engine source, and samples |
+| `demo/` | example payloads (`payload.sh`, `recon_monitor.sh`, `wifi_foxhunt.sh`, `View_Demo/`) |
 | `docs/` | the WiFi Foxhunt code walkthrough |
 
 Works on WiFi Pineapple Pager firmware 2.0. MIT-licensed — do what you like with it.

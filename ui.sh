@@ -12,6 +12,7 @@
 
 UI_DIR="${UI_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)}"
 UI_BIN="${UI_BIN:-$UI_DIR/pguid}"
+UI_VIEWC="${UI_VIEWC:-$UI_DIR/pgviewc}"
 _UI_CMD=/tmp/pgui.cmd
 _UI_EVT=/tmp/pgui.evt
 _UI_W=480; _UI_H=222
@@ -105,6 +106,23 @@ UI_GRAPH() {
         UI_BAR $(( x + i*(bw+gap) )) $(( y + h - bh )) "$bw" "$bh" "$col"
         i=$((i+1))
     done
+}
+
+# ---- view files (SwiftUI-style layouts) ----
+# UI_RENDER file.view   - lay out and draw a .view file. \(var) placeholders in
+# the view are filled in from the current shell variables. Followed by UI_SHOW
+# implicitly (the view includes its own present).
+UI_RENDER() {
+    local vf="$1" content v
+    [ -f "$vf" ] || vf="$UI_DIR/$1"
+    [ -f "$vf" ] || { echo "[UI_RENDER] no such view: $1" >&2; return 1; }
+    content="$(cat "$vf")"
+    # fill \(name) -> $name
+    while [[ "$content" =~ \\\(([a-zA-Z_][a-zA-Z0-9_]*)\) ]]; do
+        v="${BASH_REMATCH[1]}"; content="${content//\\($v)/${!v}}"
+    done
+    # compile to draw commands and feed the renderer
+    printf '%s' "$content" | "$UI_VIEWC" | while IFS= read -r l; do printf '%s\n' "$l" >&4; done
 }
 
 # ---- input ----

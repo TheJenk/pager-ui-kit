@@ -56,13 +56,30 @@ space equally. `Spacer()` is the classic "push the rest away".
 `pgview.c` is the engine (parser + stack layout + draw). It renders a view to the
 same 480×222 the Pager draws, so the preview matches the device.
 
-## Status
+## Using a view from a payload
 
-The layout engine works (see the samples). Still to wire up:
+Views run on the device — `UI_RENDER` resolves `\(var)` from the shell, compiles
+the view with `pgviewc`, and feeds the result to the renderer:
 
-- fold the engine into the `pguid` renderer so a payload can `UI_RENDER file.view`
-  directly on the device;
-- a live view-file preview in `builder.html`.
+```sh
+. ui.sh
+UI_BEGIN
+name="Beast Mode"; sig=-50; p=100
+UI_RENDER hunt.view
+UI_KEY
+UI_END
+```
 
-The command-based API (`UI_CARD`, `UI_TEXT`, …) in `ui.sh` keeps working either
-way — view files are the higher-level, no-coordinates option on top of it.
+`pgviewc` (built from `pgviewc.c`) is the engine on the device — a freestanding
+compiler that turns a `.view` into `pguid` draw commands, so the renderer stays a
+simple canvas. `pgview.c` here is the same engine as a host tool for PNG previews.
+
+The command-based API (`UI_CARD`, `UI_TEXT`, …) in `ui.sh` still works — view
+files are the higher-level, no-coordinates option on top of it.
+
+## Notes
+
+- One UI command / component per line still applies to the command API; view
+  files use normal nesting.
+- `Image("file")` is reserved — it reserves a box in the layout; on-device image
+  blitting is not wired up yet.
