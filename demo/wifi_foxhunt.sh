@@ -89,10 +89,16 @@ pick_ap() {
 }
 
 # ============================ screen 2: the hunt ==============================
+# This screen is a VIEW FILE (wifi_foxhunt.view) - a SwiftUI-style layout. We
+# only compute the numbers and colors; the engine lays out the cards, meter and
+# graph. The colors are interpolated too, so the whole screen "greens up" as you
+# close in. (The AP list above stays on the command API because it's a dynamic,
+# variable-length, selectable list - views describe a fixed layout.)
 hunt() {
-    local mac="$1" name="$2" ch="$3" history="" last=-1 sig p trend
+    local name="$2" ch="$3" history="" last=-1
+    local sig p trend col tcol      # <- these feed \(...) in the view
     while true; do
-        sig="$(signal_of "$mac")"
+        sig="$(signal_of "$1")"
         if [ -z "$sig" ]; then
             UI_CLEAR
             UI_HEADER "HUNTING  $name"
@@ -107,33 +113,15 @@ hunt() {
         history="$history $p"; set -- $history; while [ $# -gt 44 ]; do shift; done; history="$*"
 
         # warmer / colder vs the last reading
-        if   [ "$last" -lt 0 ];      then trend="LOCKED ON";  tcol=DIM
-        elif [ "$p" -gt "$last" ];   then trend="WARMER  >>"; tcol=GREEN
-        elif [ "$p" -lt "$last" ];   then trend="<<  COLDER"; tcol=RED
-        else                              trend="STEADY";     tcol=AMBER; fi
+        if   [ "$last" -lt 0 ];      then trend="LOCKED ON";  tcol=dim
+        elif [ "$p" -gt "$last" ];   then trend="WARMER  >>"; tcol=green
+        elif [ "$p" -lt "$last" ];   then trend="<<  COLDER"; tcol=red
+        else                              trend="STEADY";     tcol=amber; fi
         last=$p
 
-        local col=RED; [ "$p" -gt 33 ] && col=AMBER; [ "$p" -gt 66 ] && col=GREEN
+        col=red; [ "$p" -gt 33 ] && col=amber; [ "$p" -gt 66 ] && col=green
 
-        UI_CLEAR
-        UI_HEADER "HUNTING  $name"
-        UI_TEXT $((480-80)) 8 "CH $ch" DIM 1
-        # big readouts: three cards
-        UI_CARD 10 34 150 60
-        UI_TEXT 22 44 "SIGNAL" DIM 1
-        UI_TEXT 22 62 "$sig" "$col" 3
-        UI_CARD 166 34 150 60
-        UI_TEXT 178 44 "CLOSENESS" DIM 1
-        UI_TEXT 178 62 "$p%" "$col" 3
-        UI_CARD 322 34 148 60
-        UI_TEXT 334 44 "TREND" DIM 1
-        UI_TEXT 334 66 "$trend" "$tcol" 2
-        # the proximity meter - fills + greens as you close in
-        UI_METER 10 104 460 20 "$p" "$col"
-        # signal history graph underneath
-        UI_GRAPH 10 134 460 50 "$history" "$col"
-        UI_FOOTER "CLOSER = FULLER + GREENER" "RED  BACK"
-        UI_SHOW
+        UI_RENDER wifi_foxhunt.view      # fills in \(name) \(sig) \(p) \(col) ...
 
         case "$(UI_KEY 1)" in B) return ;; esac
     done

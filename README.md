@@ -138,8 +138,11 @@ Three full payloads in `demo/`, all pure bash:
 - **`recon_monitor.sh`** — a **live** Wi-Fi dashboard: access-point and client
   counts, a scrolling packets/sec graph and a battery meter.
 - **`wifi_foxhunt.sh`** — pick a nearby access point, then hunt it: a proximity
-  meter and signal graph fill up as you get closer. There's a full line-by-line
-  walkthrough in [`docs/wifi_foxhunt_explained.md`](docs/wifi_foxhunt_explained.md).
+  meter and signal graph fill up as you get closer. Its hunt screen is a **view
+  file** (`wifi_foxhunt.view`) — even the colours are interpolated, so the whole
+  screen greens up as you approach — while the dynamic AP list stays on the
+  command API. Full line-by-line walkthrough in
+  [`docs/wifi_foxhunt_explained.md`](docs/wifi_foxhunt_explained.md).
 
 ```sh
 scp pguid ui.sh demo/payload.sh root@172.16.52.1:/root/payloads/user/general/UI_Kit_Demo/

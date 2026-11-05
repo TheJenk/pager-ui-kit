@@ -1,0 +1,16 @@
+// The hunt screen, as a SwiftUI-style view. The payload just sets the
+// variables (name, sig, p, col, trend, tcol, history) and renders it - no
+// coordinates. Colors are interpolated too: \(col) becomes green/amber/red as
+// you get closer, so .\(col) is a live color.
+VStack(spacing: 6) {
+  Header("HUNTING \(name)")
+  HStack(spacing: 8) {
+    Card("SIGNAL")    { Text("\(sig)",   .\(col),  .big) }
+    Card("CLOSENESS") { Text("\(p)%",    .\(col),  .big) }
+    Card("TREND")     { Text("\(trend)", .\(tcol))       }
+  }.h(62)
+  Meter(value: \(p), .\(col)).h(20)
+  Graph("\(history)", .\(col)).h(52)
+  Spacer()
+  Footer("CLOSER = FULLER + GREENER", "RED  BACK")
+}

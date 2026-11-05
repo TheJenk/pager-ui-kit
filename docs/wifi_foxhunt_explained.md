@@ -172,9 +172,10 @@ Down move the selection, Green starts the hunt on the selected AP, Red exits.
 
 ```sh
 hunt() {
-    local mac="$1" name="$2" ch="$3" history="" last=-1 ...
+    local name="$2" ch="$3" history="" last=-1
+    local sig p trend col tcol      # these feed \(...) in the view
     while true; do
-        sig="$(signal_of "$mac")"
+        sig="$(signal_of "$1")"
         if [ -z "$sig" ]; then
             UI_CLEAR
             UI_HEADER "HUNTING  $name"
@@ -199,47 +200,54 @@ The `set -- $history; while [ $# -gt 44 ]; do shift; done` idiom is a neat way t
 only the newest N items of a space-separated list in pure bash.
 
 ```sh
-        if   [ "$last" -lt 0 ];      then trend="LOCKED ON";  tcol=DIM
-        elif [ "$p" -gt "$last" ];   then trend="WARMER  >>"; tcol=GREEN
-        elif [ "$p" -lt "$last" ];   then trend="<<  COLDER"; tcol=RED
-        else                              trend="STEADY";     tcol=AMBER; fi
+        if   [ "$last" -lt 0 ];      then trend="LOCKED ON";  tcol=dim
+        elif [ "$p" -gt "$last" ];   then trend="WARMER  >>"; tcol=green
+        elif [ "$p" -lt "$last" ];   then trend="<<  COLDER"; tcol=red
+        else                              trend="STEADY";     tcol=amber; fi
         last=$p
-        local col=RED; [ "$p" -gt 33 ] && col=AMBER; [ "$p" -gt 66 ] && col=GREEN
+        col=red; [ "$p" -gt 33 ] && col=amber; [ "$p" -gt 66 ] && col=green
 ```
 
 Compare to the previous reading for a **warmer/colder** hint, and pick the accent
-colour from closeness (red → amber → green).
+colour from closeness (red → amber → green). Note the colour names are lowercase
+here — they get interpolated straight into the view as `.green` / `.amber` / `.red`.
 
 ```sh
-        UI_CLEAR
-        UI_HEADER "HUNTING  $name"
-        UI_TEXT $((480-80)) 8 "CH $ch" DIM 1
-        UI_CARD 10 34 150 60
-        UI_TEXT 22 44 "SIGNAL" DIM 1
-        UI_TEXT 22 62 "$sig" "$col" 3
-        UI_CARD 166 34 150 60
-        UI_TEXT 178 44 "CLOSENESS" DIM 1
-        UI_TEXT 178 62 "$p%" "$col" 3
-        UI_CARD 322 34 148 60
-        UI_TEXT 334 44 "TREND" DIM 1
-        UI_TEXT 334 66 "$trend" "$tcol" 2
-        UI_METER 10 104 460 20 "$p" "$col"
-        UI_GRAPH 10 134 460 50 "$history" "$col"
-        UI_FOOTER "CLOSER = FULLER + GREENER" "RED  BACK"
-        UI_SHOW
+        UI_RENDER wifi_foxhunt.view
 
         case "$(UI_KEY 1)" in B) return ;; esac
     done
 }
 ```
 
-The whole hunt screen in one place: three cards (big SIGNAL / CLOSENESS / TREND
-readouts), then the two stars of the show —
+That's it — the whole hunt screen is **a view file**, `wifi_foxhunt.view`:
 
-- **`UI_METER 10 104 460 20 "$p" "$col"`** — a 0–100 bar that fills with closeness
-  and shares the colour, so it visibly grows and greens as you approach.
-- **`UI_GRAPH 10 134 460 50 "$history" "$col"`** — the last 44 closeness readings as
-  an auto-scaled bar graph, so you can see the trend of your last ~40 seconds.
+```swift
+VStack(spacing: 6) {
+  Header("HUNTING \(name)")
+  HStack(spacing: 8) {
+    Card("SIGNAL")    { Text("\(sig)",   .\(col),  .big) }
+    Card("CLOSENESS") { Text("\(p)%",    .\(col),  .big) }
+    Card("TREND")     { Text("\(trend)", .\(tcol))       }
+  }.h(62)
+  Meter(value: \(p), .\(col)).h(20)
+  Graph("\(history)", .\(col)).h(52)
+  Spacer()
+  Footer("CLOSER = FULLER + GREENER", "RED  BACK")
+}
+```
+
+`UI_RENDER` fills in every `\(...)` from the shell and lets the layout engine
+place the three cards, the meter and the graph — **no coordinates anywhere**. The
+nice trick is that the *colours* are interpolated too: `.\(col)` becomes
+`.green`/`.amber`/`.red`, so the whole screen fills and greens up as you close in.
+The meter fills with closeness and the graph shows your last ~40 readings, exactly
+as before — but now the payload is pure logic and the look lives in a file you can
+design in `builder.html`.
+
+The dynamic AP list in screen one stays on the command API on purpose: it's a
+variable-length, selectable list, and view files describe a *fixed* layout. Use
+views for rich static screens, commands for things that grow and scroll.
 
 `UI_KEY 1` refreshes once a second, Red returns to the list. That one-second loop
 is why the display feels live without you managing any timers.
