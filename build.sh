@@ -8,3 +8,5 @@ FLAGS="-O2 -fno-pic -mno-abicalls -G0 -nostdlib -ffreestanding -static -s -Wl,-e
 $CC $FLAGS -o pguid   pguid.c      # the raw-canvas renderer
 $CC $FLAGS -o pgviewc pgviewc.c    # the .view -> draw-commands compiler
 for b in pguid pgviewc; do ls -lh $b | awk -v n=$b '{print n": "$5}'; shasum -a 256 $b; done
+# refresh the copies bundled in each self-contained demo folder
+[ -f demo/sync-kit.sh ] && bash demo/sync-kit.sh

@@ -139,7 +139,14 @@ No install, no server — it's a single self-contained file.
 
 ## Examples
 
-Full payloads in `demo/`, all pure bash:
+Each demo in `demo/` is a **self-contained folder** — it already has the kit it
+needs (`ui.sh`, `pguid`, and `pgviewc` where it uses views). Copy the whole
+folder to the Pager and run it:
+
+```sh
+scp -r demo/App_Demo root@172.16.52.1:/root/payloads/user/general/
+# then on the Pager: Payloads > user > general > App Demo
+```
 
 - **`App_Demo/`** — **how to structure a real app**: one main loop that's a state
   machine over screens (a menu plus Stopwatch / System / About sub-screens). A
@@ -147,21 +154,21 @@ Full payloads in `demo/`, all pure bash:
   start timestamp, so it never pauses or resets — and the battery shows on every
   screen. The menu uses the command API (dynamic, selectable); the sub-screens
   are view files. Start here if you want to know how to do more than one screen.
-- **`payload.sh`** — a dashboard with cards and a bar-graph, a menu, a confirm,
+- **`UI_Kit_Demo/`** — a dashboard with cards and a bar-graph, a menu, a confirm,
   and message screens.
-- **`recon_monitor.sh`** — a **live** Wi-Fi dashboard: access-point and client
+- **`Recon_Monitor/`** — a **live** Wi-Fi dashboard: access-point and client
   counts, a scrolling packets/sec graph and a battery meter.
-- **`wifi_foxhunt.sh`** — pick a nearby access point, then hunt it: a proximity
+- **`WiFi_Foxhunt/`** — pick a nearby access point, then hunt it: a proximity
   meter and signal graph fill up as you get closer. Its hunt screen is a **view
   file** (`wifi_foxhunt.view`) — even the colours are interpolated, so the whole
   screen greens up as you approach — while the dynamic AP list stays on the
   command API. Full line-by-line walkthrough in
   [`docs/wifi_foxhunt_explained.md`](docs/wifi_foxhunt_explained.md).
+- **`View_Demo/`** — the smallest view-file example: set a variable, `UI_RENDER`
+  a `.view`, done.
 
-```sh
-scp pguid ui.sh demo/payload.sh root@172.16.52.1:/root/payloads/user/general/UI_Kit_Demo/
-# then: Payloads > user > general > UI Kit Demo
-```
+> The kit copies in each folder are generated from the repo root by
+> `demo/sync-kit.sh` (run automatically by `build.sh`), so they never drift.
 
 A live screen that refreshes on a timer but reacts instantly to a button looks
 like this:
@@ -211,7 +218,7 @@ bash build.sh
 | `builder.html` | the visual **view-file** builder |
 | `tools/mkimg.sh` | turn a PNG/JPG into a `.pgi` image for `Image`/`UI_IMAGE` |
 | `views/` | the view-file syntax, engine source, and samples |
-| `demo/` | example payloads (`payload.sh`, `recon_monitor.sh`, `wifi_foxhunt.sh`, `View_Demo/`) |
+| `demo/` | self-contained example payloads, one folder each (`App_Demo/`, `UI_Kit_Demo/`, `Recon_Monitor/`, `WiFi_Foxhunt/`, `View_Demo/`) + `sync-kit.sh` |
 | `docs/` | the WiFi Foxhunt code walkthrough |
 
 Works on WiFi Pineapple Pager firmware 2.0. MIT-licensed — do what you like with it.

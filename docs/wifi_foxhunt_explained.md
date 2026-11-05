@@ -1,6 +1,6 @@
 # WiFi Foxhunt — a line-by-line walkthrough
 
-`demo/wifi_foxhunt.sh` is a complete, real payload built with the kit. You pick a
+`demo/WiFi_Foxhunt/payload.sh` is a complete, real payload built with the kit. You pick a
 nearby access point, then "hunt" it: a proximity meter and a signal-history graph
 fill up and turn green as you walk closer (stronger RSSI). Every pixel is drawn by
 the bundled renderer; all the logic is plain bash.
