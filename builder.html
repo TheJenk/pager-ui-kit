@@ -26,6 +26,7 @@
   .tree{flex:1;overflow:auto;padding:4px 8px 12px;font-size:13px}
   .row{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px;cursor:pointer;white-space:nowrap}
   .row:hover{background:var(--panel2)} .row.sel{background:#1b3a2c;outline:1px solid #2f7d57}
+  .row.dropin{background:#17382a;outline:1px dashed #2fe08a} .row.dropafter{box-shadow:inset 0 -2px 0 #2fe08a}
   .row .ty{font-weight:600} .row .sm{color:var(--dim);overflow:hidden;text-overflow:ellipsis}
   .center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-width:0;padding:16px}
   .stage{background:#000;border:3px solid #1f2735;border-radius:12px;padding:6px;box-shadow:0 18px 50px rgba(0,0,0,.6)}
@@ -66,7 +67,7 @@
   <aside class="nav">
     <h3>Add into selection</h3>
     <div class="palette" id="palette"></div>
-    <h3>Outline</h3>
+    <h3>Outline <span style="font-weight:400;color:var(--dim);font-size:11px">— drag to move</span></h3>
     <div class="tree" id="tree"></div>
   </aside>
   <div class="center">
@@ -118,7 +119,7 @@ function mk(t){ const n={type:t,text:'',text2:'',color:'text',size:2,pct:70,valu
   if(t==='Meter')n.color='green'; if(t==='Graph')n.color='accent'; if(t==='Bar')n.color='accent';
   if(t==='Image')n.src='logo.pgi';
   return n; }
-let root=null, sel=null;
+let root=null, sel=null, dragNode=null;
 
 // ---- parse .view -> tree ----
 function parseView(src){ let i=0;
@@ -194,9 +195,13 @@ function drawNode(n){ switch(n.type){
     text(n.x+6,n.y+Math.max(4,(n.h-7)/2),'IMG '+n.src,'DIM',1); break;
   case 'Spacer': break; } }
 
-function render(){ fill(0,0,W,H,'BG'); layout(root,0,0,W,H); drawNode(root);
+// redraw everything EXCEPT the inspector inputs - used while typing in the
+// inspector, so the field you're in keeps focus (rebuilding it would drop focus
+// after every keystroke).
+function renderLive(){ fill(0,0,W,H,'BG'); layout(root,0,0,W,H); drawNode(root);
   if(sel){ ctx.strokeStyle='#2fe08a'; ctx.setLineDash([3,2]); ctx.strokeRect(sel.x+.5,sel.y+.5,Math.max(1,sel.w-1),Math.max(1,sel.h-1)); ctx.setLineDash([]); }
-  renderTree(); renderProps(); }
+  renderTree(); }
+function render(){ renderLive(); renderProps(); }
 
 // ---- tree <-> code sync ----
 function pushCode(){ codeEl.value=gen(root); }
@@ -223,8 +228,28 @@ function walk(n,depth,el){ const d=document.createElement('div'); d.className='r
   const ty=document.createElement('span'); ty.className='ty'; ty.textContent=n.type;
   const sm=document.createElement('span'); sm.className='sm'; sm.textContent=n.text||n.text2||(n.type==='Graph'?'series':n.type==='Image'?n.src:'');
   d.appendChild(ty); if(sm.textContent){ d.appendChild(document.createTextNode(' ')); d.appendChild(sm); }
-  d.onclick=()=>{ sel=n; render(); }; el.appendChild(d);
+  d.onclick=()=>{ sel=n; render(); };
+  // drag to reorganize: drop onto a stack = move INSIDE it; drop onto an element
+  // = place right AFTER it. Works across stacks, like embedding in Xcode.
+  if(n!==root){ d.draggable=true;
+    d.addEventListener('dragstart',e=>{ dragNode=n; e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',n.type);}catch(_){ } e.stopPropagation(); });
+    d.addEventListener('dragend',()=>{ dragNode=null; document.querySelectorAll('.row.dropin,.row.dropafter').forEach(r=>r.classList.remove('dropin','dropafter')); }); }
+  d.addEventListener('dragover',e=>{ if(!dragNode||dragNode===n||findNode(dragNode,n))return; e.preventDefault();
+    d.classList.add(CONTAINER(n.type)?'dropin':'dropafter'); });
+  d.addEventListener('dragleave',()=>d.classList.remove('dropin','dropafter'));
+  d.addEventListener('drop',e=>{ d.classList.remove('dropin','dropafter'); if(!dragNode||dragNode===n||findNode(dragNode,n))return;
+    e.preventDefault(); e.stopPropagation(); reparent(dragNode,n); dragNode=null; });
+  el.appendChild(d);
   (n.kids||[]).forEach(k=>walk(k,depth+1,el)); }
+// move `node` to a new place: into `target` if it's a stack, else right after it.
+function reparent(node,target){ if(!node||node===root||node===target||findNode(node,target))return;
+  const sp=parentOf(root,node); if(!sp)return; sp.kids.splice(sp.kids.indexOf(node),1);
+  if(CONTAINER(target.type)) target.kids.push(node);
+  else { const tp=parentOf(root,target)||root; tp.kids.splice(tp.kids.indexOf(target)+1,0,node); }
+  sel=node; pushCode(); render(); }
+// pull `node` out one level - place it just after its parent in the grandparent.
+function outdent(n){ const p=parentOf(root,n); if(!p||p===root)return; const g=parentOf(root,p); if(!g)return;
+  p.kids.splice(p.kids.indexOf(n),1); g.kids.splice(g.kids.indexOf(p)+1,0,n); sel=n; pushCode(); render(); }
 
 // ---- inspector ----
 const FIELDS={ VStack:[['spacing','n']], HStack:[['spacing','n']], ZStack:[],
@@ -240,21 +265,22 @@ function renderProps(){ const p=document.getElementById('props'); if(!sel){ p.in
     if(kind==='c'){ inp=document.createElement('select'); const o=[...COLOROPTS]; if(!o.includes(sel[k]))o.unshift(sel[k]);
       o.forEach(c=>{ const op=document.createElement('option'); op.value=c; op.textContent=c; inp.appendChild(op); }); inp.value=sel[k]; }
     else { inp=document.createElement('input'); inp.value=sel[k]; }
-    inp.oninput=()=>{ sel[k]=kind==='n'?(parseInt(inp.value)||0):inp.value; pushCode(); render(); };
+    inp.oninput=()=>{ sel[k]=kind==='n'?(parseInt(inp.value)||0):inp.value; pushCode(); renderLive(); };
     row.appendChild(inp); p.appendChild(row); });
   // size modifiers for any element
   const szrow=document.createElement('div'); szrow.className='field';
   szrow.innerHTML='<label>fix h/w</label>';
   const ih=document.createElement('input'); ih.placeholder='h'; ih.style.width='50px'; ih.value=sel.fixH>=0?sel.fixH:''; ih.title='fixed height .h()';
   const iw=document.createElement('input'); iw.placeholder='w'; iw.style.width='50px'; iw.value=sel.fixW>=0?sel.fixW:''; iw.title='fixed width .w()';
-  ih.oninput=()=>{ sel.fixH=ih.value===''?-1:(parseInt(ih.value)||0); pushCode(); render(); };
-  iw.oninput=()=>{ sel.fixW=iw.value===''?-1:(parseInt(iw.value)||0); pushCode(); render(); };
+  ih.oninput=()=>{ sel.fixH=ih.value===''?-1:(parseInt(ih.value)||0); pushCode(); renderLive(); };
+  iw.oninput=()=>{ sel.fixW=iw.value===''?-1:(parseInt(iw.value)||0); pushCode(); renderLive(); };
   szrow.appendChild(ih); szrow.appendChild(iw); p.appendChild(szrow);
   // actions
   const act=document.createElement('div'); act.className='act';
   const mk2=(t,f,cls)=>{ const b=document.createElement('button'); b.className='sm'+(cls?' '+cls:''); b.textContent=t; b.onclick=f; return b; };
   act.appendChild(mk2('↑',()=>move(sel,-1))); act.appendChild(mk2('↓',()=>move(sel,1)));
   act.appendChild(mk2('Wrap V',()=>wrap(sel,'VStack'))); act.appendChild(mk2('Wrap H',()=>wrap(sel,'HStack')));
+  { const p=parentOf(root,sel); if(p&&p!==root) act.appendChild(mk2('Out',()=>outdent(sel))); }
   if(sel!==root) act.appendChild(mk2('Delete',()=>del(sel),'danger'));
   p.appendChild(act); }
 

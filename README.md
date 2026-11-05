@@ -122,7 +122,11 @@ files with a live, pixel-perfect preview:
 - A **component palette** (VStack, HStack, Card, Text, Meter, Graph, Image…) and
   an **outline** of your view's structure.
 - Click an element to select it, edit it in the **inspector** (text, color, size,
-  fixed `.h`/`.w`), reorder or wrap it in a stack.
+  fixed `.h`/`.w`). Reorder with ↑/↓, wrap it in a stack, or **Out** to pull it
+  up a level.
+- **Drag rows in the outline to reorganize** — drop onto a stack to move an
+  element inside it, or onto an element to drop it right after. Move things
+  between stacks freely.
 - The **`.view` code** sits in a plain editor at the bottom — edit it directly and
   the canvas follows, so you can paste one in or copy it out. Both stay in sync.
 - **Copy .view** to drop it next to your payload.
