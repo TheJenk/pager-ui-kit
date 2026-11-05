@@ -79,15 +79,32 @@ UI_BG=0b0d12; UI_ACCENT=2fae6a; UI_SELECT=1f6f4a
 UI_BEGIN
 ```
 
+## Visual builder
+
+Open **`builder.html`** in any browser for a drag-and-drop designer with a live
+preview (pixel-perfect — it uses the same font) and the generated code below:
+
+- Add elements with buttons, **drag to move, drag a corner to resize**.
+- **Edit the code directly** and the canvas follows — so you can paste a payload
+  in and see it, or copy snippets from anywhere.
+- It reads the `UI_*` commands and **ignores the rest of the payload**.
+- Payloads with **several screens** (more than one `UI_CLEAR…UI_SHOW`) show up as
+  thumbnails along the top; pick one to edit it, and its lines light up in the
+  code so you can see where it lives.
+
+No install, no server — it's a single self-contained file.
+
 ## Examples
 
-Two full payloads in `demo/`, both pure bash:
+Three full payloads in `demo/`, all pure bash:
 
 - **`payload.sh`** — a dashboard with cards and a bar-graph, a menu, a confirm,
   and message screens.
 - **`recon_monitor.sh`** — a **live** Wi-Fi dashboard: access-point and client
-  counts, a scrolling packets/sec graph and a battery meter, refreshing once a
-  second while staying responsive to buttons.
+  counts, a scrolling packets/sec graph and a battery meter.
+- **`wifi_foxhunt.sh`** — pick a nearby access point, then hunt it: a proximity
+  meter and signal graph fill up as you get closer. There's a full line-by-line
+  walkthrough in [`docs/wifi_foxhunt_explained.md`](docs/wifi_foxhunt_explained.md).
 
 ```sh
 scp pguid ui.sh demo/payload.sh root@172.16.52.1:/root/payloads/user/general/UI_Kit_Demo/
@@ -138,6 +155,8 @@ bash build.sh
 | `pguid` / `pguid.c` | the renderer (prebuilt binary + source) |
 | `font5x7.h` | the bitmap font |
 | `build.sh` | reproducible build of `pguid` |
-| `demo/payload.sh` | a full example payload |
+| `builder.html` | the visual drag-and-drop UI builder |
+| `demo/` | example payloads (`payload.sh`, `recon_monitor.sh`, `wifi_foxhunt.sh`) |
+| `docs/` | the WiFi Foxhunt code walkthrough |
 
 Works on WiFi Pineapple Pager firmware 2.0. MIT-licensed — do what you like with it.
