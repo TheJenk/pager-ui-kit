@@ -1,0 +1,9 @@
+VStack(spacing: 6) {
+  Header("SYSTEM   \(page)")
+  HStack(spacing: 8) {
+    Card("BATTERY") { Text("\(batt)%", .\(bcol)).size(5) }
+    Card("UPTIME")  { Text("\(up)", .white, .big) }
+  }.h(108)
+  Meter(value: \(batt), .\(bcol)).h(24)
+  Footer("L/R PAGE   GRN ALERT", "RED EXIT")
+}

@@ -1,0 +1,9 @@
+VStack(spacing: 6) {
+  Header("WI-FI RECON   \(page)")
+  HStack(spacing: 8) {
+    Card("APS")     { Text("\(aps)", .green).size(5) }
+    Card("CLIENTS") { Text("\(devs)", .cyan).size(5) }
+  }.h(108)
+  Card("PACKETS / SEC") { Text("\(pps)", .amber, .big) }.h(44)
+  Footer("L/R PAGE   GRN ALERT", "RED EXIT")
+}

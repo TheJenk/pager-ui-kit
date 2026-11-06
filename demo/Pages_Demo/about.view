@@ -1,0 +1,11 @@
+VStack(spacing: 5) {
+  Header("ABOUT   \(page)")
+  Spacer()
+  Text("Each page is a .view file.", .text, .small)
+  Text("Left and Right flip the pages. The", .dim, .small)
+  Text("loop sets variables and renders the", .dim, .small)
+  Text("page that is up. Green draws a banner", .dim, .small)
+  Text("on top with the command API.", .dim, .small)
+  Spacer()
+  Footer("Same pattern as the Wardrive HUD", "RED EXIT")
+}

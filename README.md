@@ -154,6 +154,12 @@ scp -r demo/App_Demo root@172.16.52.1:/root/payloads/user/general/
   start timestamp, so it never pauses or resets — and the battery shows on every
   screen. The menu uses the command API (dynamic, selectable); the sub-screens
   are view files. Start here if you want to know how to do more than one screen.
+- **`Pages_Demo/`** — **flip through live pages with the D-pad**: three dashboard
+  pages (Wi-Fi recon, System, About), each a `.view` file; Left/Right flips them,
+  the loop sets variables and `UI_RENDER`s the current one, and Green flashes an
+  alert banner drawn on top with the command API. This is the exact pattern the
+  [Wardrive HUD](https://github.com/TheJenk/pager-payloads-wip/tree/payload/wardrive-hud-uikit)
+  payload is built on.
 - **`UI_Kit_Demo/`** — a dashboard with cards and a bar-graph, a menu, a confirm,
   and message screens.
 - **`Recon_Monitor/`** — a **live** Wi-Fi dashboard: access-point and client
